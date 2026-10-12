@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mass">
+<title>Mass trainer</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#6e6e73;--card:#f2f2f7;--line:#d1d1d6;--acc:#0a5cad;--accbg:#e6f1fb;--ok:#2e7d32;--bad:#c62828;--stand:#e6f1fb;--sit:#eaf3de;--kneel:#faeeda}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--fg:#f5f5f7;--mut:#98989d;--card:#1c1c1e;--line:#38383a;--acc:#64a8f0;--accbg:#0c2a4a;--ok:#81c784;--bad:#ef9a9a;--stand:#0c2a4a;--sit:#1e3310;--kneel:#3d2a0a}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--fg);padding:env(safe-area-inset-top) 16px calc(90px + env(safe-area-inset-bottom))}
+h1{font-size:22px;margin:16px 0 8px}
+h2{font-size:14px;color:var(--mut);font-weight:500;margin:20px 0 4px}
+button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:10px 12px;min-height:44px}
+button.on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+.row{display:flex;gap:8px;margin:8px 0}.row>button{flex:1}
+.card{background:var(--card);border-radius:14px;padding:14px 16px;margin:10px 0}
+.mut{color:var(--mut);font-size:13px}
+.item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.pill{font-size:12px;padding:2px 8px;border-radius:8px;height:fit-content;white-space:nowrap}
+.stand{background:var(--stand)}.sit{background:var(--sit)}.kneel{background:var(--kneel)}
+.opt{display:block;width:100%;text-align:left;margin:8px 0}
+.txt{font-family:Georgia,serif;font-size:18px;line-height:1.8;white-space:pre-wrap}
+.gap{color:transparent;border-bottom:2px solid var(--mut)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--bg);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;border:0;font-size:13px;padding:6px 2px}
+textarea{width:100%;min-height:110px;font:15px/1.5 -apple-system,system-ui,sans-serif;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.msg{font-size:13px;min-height:18px}
+hr{border:0;border-top:1px solid var(--line);margin:10px 0}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav id="nav"></nav>
+<script>
+const ORDER=[
+["Introductory rites","Entrance procession","stand",""],
+["Introductory rites","Sign of the Cross and greeting","stand","Make the Sign of the Cross"],
+["Introductory rites","Penitential act","stand","Confiteor: strike the breast three times"],
+["Introductory rites","Kyrie","stand","Omitted if form C was used"],
+["Introductory rites","Gloria","stand","Not in Advent, Lent or most weekdays"],
+["Introductory rites","Collect","stand",""],
+["Liturgy of the Word","First reading","sit",""],
+["Liturgy of the Word","Responsorial psalm","sit",""],
+["Liturgy of the Word","Second reading","sit","Sundays and solemnities"],
+["Liturgy of the Word","Gospel acclamation","stand","No Alleluia in Lent"],
+["Liturgy of the Word","Gospel","stand","Small crosses on forehead, lips and breast"],
+["Liturgy of the Word","Homily","sit",""],
+["Liturgy of the Word","Profession of faith","stand","Bow at the Incarnation line"],
+["Liturgy of the Word","Universal prayer","stand",""],
+["Liturgy of the Eucharist","Preparation of the gifts","sit",""],
+["Liturgy of the Eucharist","Invitation to prayer","stand","Stand at \"Pray, brethren\""],
+["Liturgy of the Eucharist","Prayer over the offerings","stand",""],
+["Liturgy of the Eucharist","Preface dialogue and preface","stand",""],
+["Liturgy of the Eucharist","Sanctus","stand",""],
+["Liturgy of the Eucharist","Eucharistic Prayer","kneel","Kneel after the Sanctus"],
+["Liturgy of the Eucharist","Mystery of Faith","kneel",""],
+["Liturgy of the Eucharist","Great Amen","kneel","Stand afterwards"],
+["Communion rite","Lord's Prayer","stand",""],
+["Communion rite","Sign of peace","stand","Handshake or bow"],
+["Communion rite","Lamb of God","stand",""],
+["Communion rite","Invitation to Communion","kneel","Varies by parish"],
+["Communion rite","Communion","stand","Bow before receiving; answer Amen"],
+["Communion rite","Prayer after Communion","stand","Kneel or sit in silence beforehand"],
+["Concluding rites","Final blessing","stand","Make the Sign of the Cross"],
+["Concluding rites","Dismissal","stand",""]];
+
+const PR={
+of:["Our Father","Our Father, who art in heaven, hallowed be thy name; thy kingdom come, thy will be done on earth as it is in heaven. Give us this day our daily bread, and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen."],
+hm:["Hail Mary","Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen."],
+gb:["Glory Be","Glory be to the Father, and to the Son, and to the Holy Spirit; as it was in the beginning, is now, and ever shall be, world without end. Amen."],
+ap:["Apostles' Creed (traditional)","I believe in God, the Father almighty, Creator of heaven and earth; and in Jesus Christ, his only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried. He descended into hell; the third day he rose again from the dead; he ascended into heaven, and is seated at the right hand of God the Father almighty; from thence he shall come to judge the living and the dead. I believe in the Holy Spirit, the holy Catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen."],
+fp:["Fatima Prayer","O my Jesus, forgive us our sins, save us from the fires of hell; lead all souls to heaven, especially those in most need of thy mercy."],
+hq:["Hail, Holy Queen","Hail, holy Queen, Mother of mercy, hail, our life, our sweetness and our hope. To thee do we cry, poor banished children of Eve; to thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us, and after this our exile show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary.\nV. Pray for us, O holy Mother of God.\nR. That we may be made worthy of the promises of Christ."]};
+
+const LONG={conf:"Confiteor (I confess)",glor:"Gloria",cred:"Nicene Creed",apm:"Apostles' Creed (Missal wording)",pray:"Response to \"Pray, brethren\"",sanc:"Sanctus",mfa:"Mystery of Faith, option 1",mfb:"Mystery of Faith, option 2",mfc:"Mystery of Faith, option 3",agnus:"Lamb of God",worthy:"Response to \"Behold the Lamb of God\""};
+
+const DIALOGUE=[
+["Greeting","The Lord be with you.","And with your spirit."],
+["Penitential act, form A","I confess…",null,"conf"],
+["Penitential act, form B","Have mercy on us, O Lord.","For we have sinned against you."],
+["Penitential act, form B","Show us, O Lord, your mercy.","And grant us your salvation."],
+["Penitential act, form C / Kyrie","Lord, have mercy.","Lord, have mercy."],
+["Penitential act, form C / Kyrie","Christ, have mercy.","Christ, have mercy."],
+["Absolution","May almighty God have mercy on us…","Amen."],
+["Gloria","Glory to God in the highest…",null,"glor"],
+["Collect","…for ever and ever.","Amen."],
+["After the readings","The word of the Lord.","Thanks be to God."],
+["Gospel","A reading from the holy Gospel according to N.","Glory to you, O Lord."],
+["Gospel","The Gospel of the Lord.","Praise to you, Lord Jesus Christ."],
+["Profession of faith","I believe in one God…",null,"cred"],
+["Universal prayer","Lord, in your mercy.","Hear our prayer."],
+["Preparation of the gifts","Blessed are you, Lord God of all creation…","Blessed be God for ever."],
+["Invitation to prayer","Pray, brethren…",null,"pray"],
+["Preface dialogue","Lift up your hearts.","We lift them up to the Lord."],
+["Preface dialogue","Let us give thanks to the Lord our God.","It is right and just."],
+["Sanctus","…as without end we acclaim:",null,"sanc"],
+["Mystery of Faith","The mystery of faith. (option 1)",null,"mfa"],
+["Mystery of Faith","The mystery of faith. (option 2)",null,"mfb"],
+["Mystery of Faith","The mystery of faith. (option 3)",null,"mfc"],
+["Doxology","Through him, and with him, and in him…","Amen."],
+["Lord's Prayer","At the Saviour's command…",null,"of"],
+["Lord's Prayer","…the coming of our Saviour, Jesus Christ.","For the kingdom, the power and the glory are yours now and for ever."],
+["Sign of peace","The peace of the Lord be with you always.","And with your spirit."],
+["Lamb of God","(during the breaking of the bread)",null,"agnus"],
+["Invitation to Communion","Behold the Lamb of God…",null,"worthy"],
+["Communion","The Body of Christ.","Amen."],
+["Prayer after Communion","…for ever and ever.","Amen."],
+["Final blessing","May almighty God bless you…","Amen."],
+["Dismissal","Go forth, the Mass is ended.","Thanks be to God."]];
+
+const MYS={Joyful:["The Annunciation","The Visitation","The Nativity","The Presentation in the Temple","The Finding in the Temple"],
+Sorrowful:["The Agony in the Garden","The Scourging at the Pillar","The Crowning with Thorns","The Carrying of the Cross","The Crucifixion"],
+Glorious:["The Resurrection","The Ascension","The Descent of the Holy Spirit","The Assumption of Mary","The Coronation of Mary"],
+Luminous:["The Baptism of the Lord","The Wedding at Cana","The Proclamation of the Kingdom","The Transfiguration","The Institution of the Eucharist"]};
+const DAYSET=["Glorious","Joyful","Sorrowful","Glorious","Luminous","Sorrowful","Joyful"];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const initials=s=>s.replace(/([A-Za-z])[A-Za-z'’]*/g,"$1");
+let S={texts:{},lv:{}};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem("massApp")||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem("massApp",JSON.stringify(S))}catch(e){}};
+const get=k=>(PR[k]&&PR[k][1])||S.texts[k]||"";
+const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn};
+const app=h=>{$("#app").innerHTML=h;window.scrollTo(0,0)};
+const R={};
+const TABS=[["order","Order"],["resp","Responses"],["pray","Prayers"],["ros","Rosary"],["texts","Texts"]];
+let tab="order";
+function nav(){$("#nav").innerHTML=TABS.map(([k,l])=>`<button class="${k===tab?"on":""}" data-t="${k}">${l}</button>`).join("");
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;nav();R[tab]()})}
+
+let om=0,sc=0,tot=0;
+R.order=()=>{const m=["Browse","What next","Posture"];
+app(`<h1>Order of Mass</h1><div class="row">${m.map((x,i)=>`<button id="om${i}" class="${i===om?"on":""}">${x}</button>`).join("")}</div><div id="ob"></div>`);
+m.forEach((x,i)=>on("om"+i,()=>{om=i;sc=0;tot=0;R.order()}));[obrowse,onext,opost][om]()};
+function obrowse(){let h="",last="";ORDER.forEach(o=>{if(o[0]!==last){h+=`<h2>${o[0]}</h2>`;last=o[0]}
+h+=`<div class="item"><div>${o[1]}${o[3]?`<div class="mut">${esc(o[3])}</div>`:""}</div><span class="pill ${o[2]}">${o[2]}</span></div>`});$("#ob").innerHTML=h}
+function quiz(q,opts,ans,expl,again){let done=false;
+$("#ob").innerHTML=`<p class="mut">Score ${sc} / ${tot}</p><div class="card">${q}</div>${opts.map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}<div id="fb"></div>`;
+document.querySelectorAll("#ob .opt").forEach(b=>b.onclick=()=>{if(done)return;done=true;tot++;const ok=opts[b.dataset.i]===ans;if(ok)sc++;
+b.style.borderColor=ok?"var(--ok)":"var(--bad)";
+$("#fb").innerHTML=`<p style="color:${ok?"var(--ok)":"var(--bad)"}">${ok?"Correct":"Answer: "+esc(expl)}</p><button id="nx" class="opt">Next question</button>`;on("nx",again)})}
+function onext(){const i=Math.floor(Math.random()*(ORDER.length-1)),ans=ORDER[i+1][1];const o=[ans];
+while(o.length<4){const c=ORDER[Math.floor(Math.random()*ORDER.length)][1];if(!o.includes(c)&&c!==ORDER[i][1])o.push(c)}
+quiz(`<div class="mut">${ORDER[i][0]}</div><b>What comes after: ${ORDER[i][1]}?</b>`,shuffle(o),ans,ans,onext)}
+function opost(){const s=ORDER[Math.floor(Math.random()*ORDER.length)];
+quiz(`<div class="mut">${s[0]}</div><b>${s[1]}: what's your posture?</b>`,["stand","sit","kneel"],s[2],s[2]+(s[3]?" — "+s[3]:""),opost)}
+
+let rq=[],rc=null,rord=true,rgot=0,rseen=0,rhint=false,rshow=false;
+const rans=d=>d[2]||get(d[3]);
+function rbuild(){rq=DIALOGUE.filter(rans).map(d=>({d,r:false}));if(!rord)shuffle(rq);rgot=0;rseen=0;rnext()}
+R.resp=rbuild;
+function rnext(){rc=rq.shift();rhint=false;rshow=false;
+if(!rc){app(`<h1>Responses</h1><div class="card"><b>Round complete</b><div class="mut">${rgot} of ${rseen} right first time. Missed cards repeated until correct.</div></div><button class="opt" id="ra">Start again</button>`);on("ra",rbuild);return}rrender()}
+function rrender(){const d=rc.d,a=rans(d),miss=DIALOGUE.filter(x=>!rans(x)).length;
+app(`<h1>Responses</h1><div class="row"><button id="ro" class="${rord?"on":""}">In order</button><button id="rs" class="${rord?"":"on"}">Shuffled</button></div>
+<p class="mut">${rq.length+1} left · ${rgot} right first time${miss?` · ${miss} texts still to add in Texts`:""}</p>
+<div class="card"><div class="mut">${esc(d[0])}</div><div style="margin-top:6px"><span class="mut">Priest: </span>${esc(d[1])}</div>
+${rshow?`<hr><div class="txt">${esc(a)}</div>`:rhint?`<hr><div class="txt">${esc(initials(a))}</div>`:""}</div>
+${rshow?`<div class="row"><button id="rm">Missed it</button><button id="rk" class="on">Got it</button></div>`:`<div class="row"><button id="rh">First letters</button><button id="rv">Reveal</button></div>`}`);
+on("ro",()=>{rord=true;rbuild()});on("rs",()=>{rord=false;rbuild()});
+on("rh",()=>{rhint=true;rrender()});on("rv",()=>{rshow=true;rrender()});
+on("rk",()=>{if(!rc.r){rgot++;rseen++}rnext()});
+on("rm",()=>{if(!rc.r)rseen++;rc.r=true;rq.splice(Math.min(3,rq.length),0,rc);rnext()})}
+
+const LEVELS=["Full text","A quarter hidden","Half hidden","Three quarters hidden","First letters only","From memory"];
+let pk=null,pfull=false;
+const allPrayers=()=>[...Object.keys(PR).map(k=>[k,PR[k][0]]),...Object.keys(LONG).map(k=>[k,LONG[k]])];
+R.pray=()=>{if(!pk){
+app(`<h1>Prayers</h1><p class="mut">Hide more of the text each time until you can say it from memory. Tap a blank to peek at one word.</p>${allPrayers().map(([k,n])=>get(k)?`<button class="opt" data-k="${k}">${esc(n)}<div class="mut">${LEVELS[S.lv[k]||0]}</div></button>`:`<div class="opt mut" style="padding:10px 12px">${esc(n)}: add it in Texts</div>`).join("")}`);
+document.querySelectorAll("#app button[data-k]").forEach(b=>b.onclick=()=>{pk=b.dataset.k;pfull=false;R.pray()});return}
+const lv=S.lv[pk]||0,t=get(pk),name=(PR[pk]||[LONG[pk]])[0];
+const frac=[0,.25,.5,.75][lv];
+const body=pfull||lv===0?esc(t):lv===4?esc(initials(t)):lv===5?`<span class="mut">Say it aloud, then tap Show full to check.</span>`:
+t.split(/(\s+)/).map(w=>/^\s+$/.test(w)||!w?w:(Math.random()<frac?`<span class="gap">${esc(w)}</span>`:esc(w))).join("");
+app(`<button id="pb">← All prayers</button><h1>${esc(name)}</h1><p class="mut">${LEVELS[lv]}</p><div class="card txt" id="pt">${body}</div>
+<div class="row"><button id="pe">Easier</button><button id="ph" class="on">Harder</button></div>
+<div class="row"><button id="pr">Reshuffle</button><button id="pf">${pfull?"Hide again":"Show full"}</button></div>`);
+$("#pt").onclick=e=>{if(e.target.classList.contains("gap"))e.target.classList.remove("gap")};
+on("pb",()=>{pk=null;R.pray()});
+on("pe",()=>{S.lv[pk]=Math.max(0,lv-1);save();pfull=false;R.pray()});
+on("ph",()=>{S.lv[pk]=Math.min(5,lv+1);save();pfull=false;R.pray()});
+on("pr",()=>{pfull=false;R.pray()});on("pf",()=>{pfull=!pfull;R.pray()})};
+
+let rset=DAYSET[new Date().getDay()],rpos=0,rhide=false;
+function rsteps(){const s=[["Sign of the Cross, then the Apostles' Creed","ap"],["Our Father","of"],["Hail Mary, for faith","hm"],["Hail Mary, for hope","hm"],["Hail Mary, for charity","hm"],["Glory Be","gb"]];
+const ord=["First","Second","Third","Fourth","Fifth"];
+MYS[rset].forEach((m,i)=>{s.push([`${ord[i]} ${rset} Mystery: ${m}`,null,true]);s.push(["Our Father","of"]);
+for(let n=1;n<=10;n++)s.push([`Hail Mary ${n} of 10 · ${m}`,"hm"]);s.push(["Glory Be","gb"],["Fatima Prayer","fp"])});
+s.push(["Hail, Holy Queen","hq"],["Sign of the Cross",null]);return s}
+R.ros=()=>{const s=rsteps(),st=s[rpos];
+app(`<h1>Rosary</h1><div class="row">${Object.keys(MYS).map(k=>`<button data-s="${k}" class="${k===rset?"on":""}" style="font-size:13px;padding:8px 2px">${k}</button>`).join("")}</div>
+<p class="mut">Step ${rpos+1} of ${s.length}${rset===DAYSET[new Date().getDay()]?" · today's mysteries":""}</p>
+<div class="card"><b>${esc(st[0])}</b>${st[2]?`<div class="mut" style="margin-top:6px">Announce the mystery and reflect on it during the decade.</div>`:""}${st[1]?`<hr><div class="txt">${rhide?`<span class="mut">Say it from memory.</span>`:esc(get(st[1]))}</div>`:""}</div>
+<div class="row"><button id="rp">Back</button><button id="rn" class="on">${rpos===s.length-1?"Start again":"Next"}</button></div>
+<div class="row"><button id="rt">${rhide?"Show words":"Hide words"}</button></div>`);
+document.querySelectorAll("#app button[data-s]").forEach(b=>b.onclick=()=>{rset=b.dataset.s;rpos=0;R.ros()});
+on("rp",()=>{rpos=Math.max(0,rpos-1);R.ros()});on("rn",()=>{rpos=rpos===s.length-1?0:rpos+1;R.ros()});
+on("rt",()=>{rhide=!rhide;R.ros()})};
+
+R.texts=()=>{app(`<h1>Your texts</h1><p class="mut">Paste each text from your missal or parish sheet. Saved texts join the Responses drill and the Prayers list.</p>
+${Object.keys(LONG).map(k=>`<h2>${esc(LONG[k])}</h2><textarea id="x_${k}">${esc(S.texts[k]||"")}</textarea>`).join("")}
+<p class="msg" id="tm"></p><button class="opt" id="ts" style="text-align:center">Save texts</button>
+<h2>Backup</h2><p class="mut">Copy a backup to Notes now and then, so your texts survive a phone change.</p>
+<button class="opt" id="tc" style="text-align:center">Copy backup</button>
+<textarea id="tb" placeholder="Paste a backup here to restore it" style="min-height:70px"></textarea>
+<p class="msg" id="bm"></p><button class="opt" id="tr" style="text-align:center">Restore backup</button>`);
+const msg=(id,t,ok)=>{const e=$("#"+id);e.textContent=t;e.style.color=ok?"var(--ok)":"var(--bad)"};
+Object.keys(LONG).forEach(k=>$("#x_"+k).oninput=()=>$("#tm").textContent="");
+on("ts",()=>{const n={};Object.keys(LONG).forEach(k=>{const v=$("#x_"+k).value.trim();if(v)n[k]=v});
+if(!Object.keys(n).length){msg("tm","Paste at least one text first",false);return}
+S.texts=n;save();msg("tm",`Saved ${Object.keys(n).length} of ${Object.keys(LONG).length} texts`,true)});
+on("tc",()=>{const j=JSON.stringify(S.texts);if(navigator.clipboard)navigator.clipboard.writeText(j).then(()=>msg("bm","Backup copied. Paste it into Notes.",true),()=>msg("bm","Couldn't copy. Try again.",false));else msg("bm","Copying isn't available here",false)});
+$("#tb").oninput=()=>$("#bm").textContent="";
+on("tr",()=>{const v=$("#tb").value.trim();if(!v){msg("bm","Paste a backup first",false);return}
+try{const o=JSON.parse(v);if(typeof o!=="object"||Array.isArray(o)||!o)throw 0;
+S.texts=Object.fromEntries(Object.entries(o).filter(([k,x])=>LONG[k]&&typeof x==="string"));save();R.texts();msg("bm","Backup restored",true)}
+catch(e){msg("bm","That doesn't look like a backup from this app",false)}})};
+
+nav();R.order();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
